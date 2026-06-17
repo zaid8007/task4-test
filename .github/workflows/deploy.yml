@@ -1,0 +1,36 @@
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+          script: |
+            cd /home/ubuntu/website
+
+            git pull origin main
+
+            sudo docker build -t eze-website .
+
+            sudo docker stop eze-container || true
+            sudo docker rm eze-container || true
+
+            sudo docker run -d \
+              --name eze-container \
+              -p 3000:80 \
+              eze-website
+
+            sudo systemctl reload nginx
